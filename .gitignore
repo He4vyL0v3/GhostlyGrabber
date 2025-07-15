@@ -1,2 +1,3 @@
 tgd/
 .env
+src/__pycache__/
