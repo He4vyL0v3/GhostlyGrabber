@@ -3,7 +3,8 @@ from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
-from uitils import adapt_datetime, convert_datetime
+
+from utils import adapt_datetime, convert_datetime
 
 sqlite3.register_adapter(datetime, adapt_datetime)
 sqlite3.register_converter("datetime", convert_datetime)
