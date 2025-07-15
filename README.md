@@ -1,19 +1,20 @@
-<img src="./data/image.png" align="right" width="200px" />
+<img src="./data/image.png" align="right" width="250px" />
 
-<br /><br />
+<br />
 <div align="left">
 
-# GhostlyGrabber
+### GhostlyGrabber
+
 
 👻 A utility for automatically downloading media files from Telegram channels and chats with convenient storage and organization of content.
 
 </div>
 
-<br />
-<br />
-<br />
+<br /><br /><br /><br /><br /><br /><br /><br />
 
 <img src="./data/screen.png" />
+
+<br /><br /><br />
 
 ## Features
 - Downloads all media (photos, videos, documents, audio) from a Telegram channel or chat
