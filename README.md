@@ -1,5 +1,6 @@
 <img src="./data/image.png" align="right" width="200px" />
 
+<br /><br />
 <div align="left">
 
 # GhostlyGrabber
@@ -12,6 +13,8 @@
 <br />
 <br />
 
+<img src="./data/screen.png" />
+
 ## Features
 - Downloads all media (photos, videos, documents, audio) from a Telegram channel or chat
 - Saves all posts, discussions, and user info to a local SQLite database
@@ -21,7 +24,14 @@
 
 ## Requirements
 - Python 3.8+
-- All dependencies from `req.txt` (see below)
+- All dependencies from `req.txt`
+- Telegram API credentials in a `.env` file or environment variables
+
+## .env example
+```
+API_ID=your_telegram_api_id
+API_HASH=your_telegram_api_hash
+```
 
 ## Installation
 
@@ -40,16 +50,17 @@ $ pip install -r req.txt
 
 ## Usage
 
+1. Create a `.env` file in the project root with your Telegram API credentials (see example above).
+2. Run the script:
+
 ```bash
 cd src
 python3 main.py
 ```
 
 ### On first run, you will be prompted for:
-- **API_ID** – Your Telegram API ID ([get it here](https://my.telegram.org/))
-- **API_HASH** – Your Telegram API hash
-- **CHANNEL NAME** – The channel username (without @) or chat name
 - **PATH** – The folder where all data (database, media, session) will be saved
+- **CHANNEL NAME** – The channel username (without @) or chat name
 
 All data, including the session file (`anon_session.session`), database (`GhostlyGrabber.db`), and downloaded media, will be stored in the folder you specify.
 
@@ -63,7 +74,7 @@ All data, including the session file (`anon_session.session`), database (`Ghostl
 - `data/image.png` – Project logo
 
 ## How it works
-1. You enter your Telegram API credentials and the target channel/chat.
+1. You enter the target folder and channel/chat name.
 2. The script connects to Telegram and downloads all messages and media.
 3. All posts, users, and discussions are saved in a local SQLite database.
 4. Media files are saved in a structured folder by channel and post.

@@ -39,7 +39,7 @@ from db import init_db, save_user, get_last_post_id, get_existing_post, add_post
 
 
 logo()
-API_ID, API_HASH, CHANNEL_NAME, PATH = get_user_data()
+API_ID, API_HASH, CHANNEL_NAME, PATH, session_exists = get_user_data()
 
 MEDIA_DIR = os.path.join(os.path.abspath(PATH), "GhostlyGrabber_media")
 MAX_CONCURRENT_DOWNLOADS = 10000
@@ -52,7 +52,7 @@ engine, Session, TelegramUser, PostModel, Discussion = init_db(PATH, CHANNEL_NAM
 init(autoreset=True)
 
 session_path = os.path.join(os.path.abspath(PATH), "anon_session.session")
-client = TelegramClient(session_path, API_ID, API_HASH)
+client = TelegramClient(session_path, int(API_ID), API_HASH)
 
 
 def get_media_info(message: Message) -> Tuple[Optional[str], Optional[str]]:
