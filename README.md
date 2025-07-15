@@ -1,6 +1,5 @@
 <img src="./data/image.png" align="right" width="200px" />
 
-<br /><br />
 <div align="left">
 
 # GhostlyGrabber
