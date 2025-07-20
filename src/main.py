@@ -5,6 +5,16 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 from colorama import Back, Fore, Style, init
+from db import (
+    add_discussion,
+    add_post,
+    get_existing_post,
+    get_last_post_id,
+    init_db,
+    save_user,
+)
+from dialog import get_user_data, logo
+from models import create_models
 from sqlalchemy import (
     Column,
     DateTime,
@@ -31,12 +41,6 @@ from telethon.tl.types import (
     User,
 )
 from tqdm import tqdm
-
-from dialog import get_user_data, logo
-from models import create_models
-from db import init_db, save_user, get_last_post_id, get_existing_post, add_post, add_discussion
-
-
 
 logo()
 API_ID, API_HASH, CHANNEL_NAME, PATH, session_exists = get_user_data()
@@ -95,7 +99,9 @@ async def download_media_file(
         try:
             await client.download_media(message.media, file=media_path)
         except Exception as e:
-            print(Fore.RED + f"Error loading media for a message {message.id}: {e}")
+            print(
+                Fore.RED + f"Error loading {media_type} for a message {message.id}: {e}"
+            )
             return None
     return media_path
 
@@ -119,9 +125,7 @@ async def download_media_with_semaphore(
     async with semaphore:
         media_type, ext = get_media_info(message)
         if media_type:
-            return await download_media_file(
-                client, message, media_type, ext, media_dir
-            )
+            return await download_media_file(client, message, ext, media_dir)
     return None
 
 
@@ -150,6 +154,70 @@ async def download_discussion(
     return None
 
 
+async def process_discussion_replies(client, session, message, channel_media_dir, semaphore):
+    if not (message.replies and message.replies.replies > 0):
+        return
+
+    discussion_dir = os.path.join(channel_media_dir, f"discussion_{message.id}")
+    os.makedirs(discussion_dir, exist_ok=True)
+
+    async for reply in client.iter_messages(channel, reply_to=message.id):
+        reply_media_path = await download_discussion(
+            client, reply, discussion_dir, semaphore
+        )
+
+        reply_username = None
+        if reply.sender_id:
+            reply_sender = await client.get_entity(reply.sender_id)
+            if isinstance(reply_sender, User):
+                reply_username = await save_user(
+                    session, TelegramUser, reply_sender
+                )
+
+        add_discussion(
+            session,
+            Discussion,
+            message_id=reply.id,
+            post_id=message.id,
+            text=reply.text,
+            date=reply.date,
+            username=reply_username,
+            media_path=reply_media_path,
+        )
+
+
+async def process_message(
+    client, session, message, channel_media_dir, semaphore
+):
+    media_path = await download_media_with_semaphore(
+        message, client, channel_media_dir, semaphore
+    )
+
+    username = None
+    if message.sender_id:
+        sender = await client.get_entity(message.sender_id)
+        if isinstance(sender, User):
+            username = await save_user(session, TelegramUser, sender)
+
+    existing_post = get_existing_post(session, PostModel, message.id)
+    if existing_post:
+        return
+
+    add_post(
+        session,
+        PostModel,
+        post_id=message.id,
+        text=message.text,
+        media_path=media_path,
+        date=message.date,
+        views=message.views,
+        forwards=message.forwards,
+        username=username,
+    )
+
+    await process_discussion_replies(client, session, message, channel_media_dir, semaphore)
+
+
 async def main():
     """
     Main function for downloading messages from a Telegram channel feed.
@@ -166,71 +234,13 @@ async def main():
             )
 
             last_post_id = get_last_post_id(session, PostModel)
-
             semaphore = asyncio.Semaphore(MAX_CONCURRENT_DOWNLOADS)
 
             async for message in client.iter_messages(channel, min_id=last_post_id):
                 try:
-                    media_path = await download_media_with_semaphore(
-                        message, client, channel_media_dir, semaphore
+                    await process_message(
+                        client, session, message, channel_media_dir, semaphore
                     )
-
-                    # Save user info
-                    username = None
-                    if message.sender_id:
-                        sender = await client.get_entity(message.sender_id)
-                        if isinstance(sender, User):
-                            username = await save_user(session, TelegramUser, sender)
-
-                    existing_post = get_existing_post(session, PostModel, message.id)
-                    if not existing_post:
-                        post = add_post(
-                            session,
-                            PostModel,
-                            post_id=message.id,
-                            text=message.text,
-                            media_path=media_path,
-                            date=message.date,
-                            views=message.views,
-                            forwards=message.forwards,
-                            username=username,
-                        )
-
-                        # Download discussions
-                        if message.replies and message.replies.replies > 0:
-                            discussion_dir = os.path.join(
-                                channel_media_dir, f"discussion_{message.id}"
-                            )
-                            os.makedirs(discussion_dir, exist_ok=True)
-
-                            async for reply in client.iter_messages(
-                                channel, reply_to=message.id
-                            ):
-                                reply_media_path = await download_discussion(
-                                    client, reply, discussion_dir, semaphore
-                                )
-
-                                reply_username = None
-                                if reply.sender_id:
-                                    reply_sender = await client.get_entity(
-                                        reply.sender_id
-                                    )
-                                    if isinstance(reply_sender, User):
-                                        reply_username = await save_user(
-                                            session, TelegramUser, reply_sender
-                                        )
-
-                                add_discussion(
-                                    session,
-                                    Discussion,
-                                    message_id=reply.id,
-                                    post_id=message.id,
-                                    text=reply.text,
-                                    date=reply.date,
-                                    username=reply_username,
-                                    media_path=reply_media_path,
-                                )
-
                 except Exception as e:
                     print(Fore.RED + f"Error {message.id}: {e}")
                 finally:
