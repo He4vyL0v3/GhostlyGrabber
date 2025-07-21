@@ -5,16 +5,6 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 from colorama import Back, Fore, Style, init
-from db import (
-    add_discussion,
-    add_post,
-    get_existing_post,
-    get_last_post_id,
-    init_db,
-    save_user,
-)
-from dialog import get_user_data, logo
-from models import create_models
 from sqlalchemy import (
     Column,
     DateTime,
@@ -41,6 +31,17 @@ from telethon.tl.types import (
     User,
 )
 from tqdm import tqdm
+
+from db import (
+    add_discussion,
+    add_post,
+    get_existing_post,
+    get_last_post_id,
+    init_db,
+    save_user,
+)
+from dialog import get_user_data, logo
+from models import create_models
 
 logo()
 API_ID, API_HASH, CHANNEL_NAME, PATH, session_exists = get_user_data()
@@ -125,7 +126,9 @@ async def download_media_with_semaphore(
     async with semaphore:
         media_type, ext = get_media_info(message)
         if media_type:
-            return await download_media_file(client, message, ext, media_dir)
+            return await download_media_file(
+                client, message, media_type, ext, media_dir
+            )
     return None
 
 
@@ -154,7 +157,9 @@ async def download_discussion(
     return None
 
 
-async def process_discussion_replies(client, session, message, channel_media_dir, semaphore):
+async def process_discussion_replies(
+    client, session, message, channel_media_dir, semaphore
+):
     if not (message.replies and message.replies.replies > 0):
         return
 
@@ -170,9 +175,7 @@ async def process_discussion_replies(client, session, message, channel_media_dir
         if reply.sender_id:
             reply_sender = await client.get_entity(reply.sender_id)
             if isinstance(reply_sender, User):
-                reply_username = await save_user(
-                    session, TelegramUser, reply_sender
-                )
+                reply_username = await save_user(session, TelegramUser, reply_sender)
 
         add_discussion(
             session,
@@ -186,9 +189,7 @@ async def process_discussion_replies(client, session, message, channel_media_dir
         )
 
 
-async def process_message(
-    client, session, message, channel_media_dir, semaphore
-):
+async def process_message(client, session, message, channel_media_dir, semaphore):
     media_path = await download_media_with_semaphore(
         message, client, channel_media_dir, semaphore
     )
@@ -215,7 +216,9 @@ async def process_message(
         username=username,
     )
 
-    await process_discussion_replies(client, session, message, channel_media_dir, semaphore)
+    await process_discussion_replies(
+        client, session, message, channel_media_dir, semaphore
+    )
 
 
 async def main():
