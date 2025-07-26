@@ -1,46 +1,21 @@
-from colorama import Back, Fore, Style, init
+from colorama import Fore
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 def logo():
-    print(Fore.RED + "                                                                ")
-    print(Fore.RED + "                        ▓▓▓▓▓▓▓▓▓▓▓▓▓                           ")
-    print(Fore.RED + "                     ▒▓▓▓▓▓▓░▒▒▒▓▓▓▓▓▓▓▒                        ")
-    print(Fore.RED + "                 ▓▓▓▓▓▓▓▓▓▓▓▓▓▓      ▓▓▓▓                       ")
-    print(Fore.RED + "               ▓▓▓▓▓         ▓▓▓▓      ▓▓▓                      ")
-    print(Fore.RED + "              ▓▓▓▓             ▓▓▓▒     ▓▓▓                     ")
-    print(Fore.RED + "             ▓▓▓                ▓▓▓▒    ▓▓▓                     ")
-    print(Fore.RED + "             ▓▓▓                 ▓▓▓     ▓▓▓                    ")
-    print(Fore.RED + "             ▓▓▓                 ░▓▓▓    ▓▓▓▓▓▓▓                ")
-    print(Fore.RED + "             ▓▓▓                 ▓▓▓     ▓▓▓ ▓▓▓▓░              ")
-    print(Fore.RED + "              ▓▓▓                ▓▓▓     ▒▓▓   ▓▓▓▒             ")
-    print(Fore.RED + "              ▒▓▓▓             ░▓▓▓      ░▓▓▒   ▓▓▓             ")
-    print(Fore.RED + "                ▓▓▓▓▓        ▓▓▓▓▓        ▓▓▓   ░▓▓▓            ")
-    print(Fore.RED + "                 ▒▓▓▓▓▓▓▓▓▓▓▓▓▓           ▓▓▓    ▓▓▓            ")
-    print(Fore.RED + "                 ▓▓▓                      ▓▓▓    ▓▓▓            ")
-    print(Fore.RED + "                 ▓▓▓                      ▓▓▓    ▓▓▓            ")
-    print(Fore.RED + "                 ▓▓▓                      ▓▓▓    ▓▓▓            ")
-    print(Fore.RED + "               ▓▓▓▓▓▓                     ▓▓▓    ▓▓▓            ")
-    print(Fore.RED + "             ▓▓▓▓▒░░       ░▓▓▓           ▓▓▓    ▓▓▓            ")
-    print(Fore.RED + "             ▓▓▓         ▓▓▓▓▓▒           ▓▓▓░▓▓▓▓▓             ")
-    print(Fore.RED + "             ▓▓▓▒       ▓▓▓▒             ▓▓▓▓▓▓▓▓▒              ")
-    print(Fore.RED + "              ▓▓▓▓▓▓▓▓▓▓▓▓▓            ▓▓▓▓                     ")
-    print(Fore.RED + "                 ▓▓▓▓▓▓▓▓▓▓▓        ▓▓▓▓▓                       ")
-    print(Fore.RED + "                          ▓▓▓▓▓▓▓▓▓▓▓▓▓                         ")
-    print(Fore.RED + "                             ▒▓▓▓▓▒                             ")
-    print(Fore.RED + "                                                                ")
-    print(
-        Fore.BLUE
-        + "                             Created by Nighty3098                         "
-    )
-    print(
-        Fore.BLUE
-        + "                                                                           "
-    )
-
-
+    print(Fore.RED + r"""
+  ________.__                    __  .__          ________            ___.  ___.
+ /  _____/|  |__   ____  _______/  |_|  | ___.__./  _____/___________ \_ |__\_ |__   ___________
+/   \  ___|  |  \ /  _ \/  ___/\   __\  |<   |  /   \  __\_  __ \__  \ | __ \| __ \_/ __ \_  __ \
+\    \_\  \   Y  (  <_> )___ \  |  | |  |_\___  \    \_\  \  | \// __ \| \_\ \ \_\ \  ___/|  | \/
+ \______  /___|  /\____/____  > |__| |____/ ____|\______  /__|  (____  /___  /___  /\___  >__|
+        \/     \/           \/            \/            \/           \/    \/    \/     \/
+""" + Fore.BLUE + """
+                             Created by Nighty3098
+""")
+    
 def get_user_data() -> tuple[str, str, str, str, bool]:
     """
     Ask user for the folder path and channel name. API_ID and API_HASH are read from environment variables.

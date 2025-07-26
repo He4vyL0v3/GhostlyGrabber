@@ -1,30 +1,10 @@
 import asyncio
 import os
-import sqlite3
-from datetime import datetime
 from typing import Optional, Tuple
 
-from colorama import Back, Fore, Style, init
-from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    create_engine,
-    func,
-)
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    mapped_column,
-    relationship,
-    sessionmaker,
-)
+from colorama import Fore, init
 from telethon import TelegramClient
 from telethon.tl.types import (
-    Channel,
     Message,
     MessageMediaDocument,
     MessageMediaPhoto,
@@ -41,7 +21,6 @@ from db import (
     save_user,
 )
 from dialog import get_user_data, logo
-from models import create_models
 
 logo()
 API_ID, API_HASH, CHANNEL_NAME, PATH, session_exists = get_user_data()
