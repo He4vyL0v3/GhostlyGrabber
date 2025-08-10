@@ -137,7 +137,12 @@ async def download_discussion(
 
 
 async def process_discussion_replies(
-    client, session, message, channel_media_dir, semaphore
+    client, 
+    session, 
+    message, 
+    channel_media_dir, 
+    semaphore,
+    entity
 ):
     if not (message.replies and message.replies.replies > 0):
         return
@@ -145,30 +150,35 @@ async def process_discussion_replies(
     discussion_dir = os.path.join(channel_media_dir, f"discussion_{message.id}")
     os.makedirs(discussion_dir, exist_ok=True)
 
-    async for reply in client.iter_messages(channel, reply_to=message.id):
-        reply_media_path = await download_discussion(
-            client, reply, discussion_dir, semaphore
-        )
+    try:
+        async for reply in client.iter_messages(entity, reply_to=message.id):
+            reply_media_path = await download_discussion(
+                client, reply, discussion_dir, semaphore
+            )
 
-        reply_username = None
-        if reply.sender_id:
-            reply_sender = await client.get_entity(reply.sender_id)
-            if isinstance(reply_sender, User):
-                reply_username = await save_user(session, TelegramUser, reply_sender)
+            reply_username = None
+            if reply.sender_id:
+                try:
+                    reply_sender = await client.get_entity(reply.sender_id)
+                    if isinstance(reply_sender, User):
+                        reply_username = await save_user(session, TelegramUser, reply_sender)
+                except (ValueError, TypeError) as e:
+                    print(Fore.YELLOW + f"Error getting sender for reply {reply.id}: {e}")
 
-        add_discussion(
-            session,
-            Discussion,
-            message_id=reply.id,
-            post_id=message.id,
-            text=reply.text,
-            date=reply.date,
-            username=reply_username,
-            media_path=reply_media_path,
-        )
+            add_discussion(
+                session,
+                Discussion,
+                message_id=reply.id,
+                post_id=message.id,
+                text=reply.text,
+                date=reply.date,
+                username=reply_username,
+                media_path=reply_media_path,
+            )
+    except Exception as e:
+        print(Fore.RED + f"Error processing replies for message {message.id}: {e}")
 
-
-async def process_message(client, session, message, channel_media_dir, semaphore):
+async def process_message(client, session, message, channel_media_dir, semaphore, entity):
     media_path = await download_media_with_semaphore(
         message, client, channel_media_dir, semaphore
     )
@@ -196,15 +206,11 @@ async def process_message(client, session, message, channel_media_dir, semaphore
     )
 
     await process_discussion_replies(
-        client, session, message, channel_media_dir, semaphore
+        client, session, message, channel_media_dir, semaphore, entity
     )
 
 
 async def main():
-    """
-    Main function for downloading messages from a Telegram channel feed.
-    Handles downloading media, saving users, posts, and discussions to the database.
-    """
     async with client:
         session = Session()
         try:
@@ -221,7 +227,12 @@ async def main():
             async for message in client.iter_messages(channel, min_id=last_post_id):
                 try:
                     await process_message(
-                        client, session, message, channel_media_dir, semaphore
+                        client, 
+                        session, 
+                        message, 
+                        channel_media_dir, 
+                        semaphore,
+                        channel
                     )
                 except Exception as e:
                     print(Fore.RED + f"Error {message.id}: {e}")
