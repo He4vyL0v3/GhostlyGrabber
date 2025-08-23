@@ -12,6 +12,10 @@ from telethon.tl.types import (
 )
 from tqdm import tqdm
 
+from opentele.td import TDesktop
+from opentele.tl import TelegramClient
+from opentele.api import UseCurrentSession
+
 from db import (
     add_discussion,
     add_post,
@@ -21,22 +25,6 @@ from db import (
     save_user,
 )
 from dialog import get_user_data, logo
-
-logo()
-API_ID, API_HASH, CHANNEL_NAME, PATH, session_exists = get_user_data()
-
-MEDIA_DIR = os.path.join(os.path.abspath(PATH), "GhostlyGrabber_media")
-MAX_CONCURRENT_DOWNLOADS = 10000
-
-channel_media_dir = os.path.join(MEDIA_DIR, CHANNEL_NAME)
-os.makedirs(channel_media_dir, exist_ok=True)
-
-engine, Session, TelegramUser, PostModel, Discussion = init_db(PATH, CHANNEL_NAME)
-
-init(autoreset=True)
-
-session_path = os.path.join(os.path.abspath(PATH), "anon_session.session")
-client = TelegramClient(session_path, int(API_ID), API_HASH)
 
 
 def get_media_info(message: Message) -> Tuple[Optional[str], Optional[str]]:
@@ -211,6 +199,45 @@ async def process_message(client, session, message, channel_media_dir, semaphore
 
 
 async def main():
+    logo()
+    API_ID, API_HASH, CHANNEL_NAME, PATH, TDATA_PATH, session_exists = get_user_data()
+
+    MEDIA_DIR = os.path.join(os.path.abspath(PATH), "GhostlyGrabber_media")
+    MAX_CONCURRENT_DOWNLOADS = 10000
+
+    channel_media_dir = os.path.join(MEDIA_DIR, CHANNEL_NAME)
+    os.makedirs(channel_media_dir, exist_ok=True)
+
+    engine, Session, TelegramUser, PostModel, Discussion = init_db(PATH, CHANNEL_NAME)
+    init(autoreset=True)
+
+    # Initialize client variable
+    client = None
+    
+    if TDATA_PATH != "":
+        try:
+            tdesk = TDesktop(TDATA_PATH)
+            if not tdesk.isLoaded():
+                print(Fore.RED + "Failed to load tdata. Please check the path and try again.")
+                print(Fore.YELLOW + "Falling back to API method...")
+                # Fall back to API method
+                session_path = os.path.join(os.path.abspath(PATH), "anon_session.session")
+                client = TelegramClient(session_path, int(API_ID), API_HASH)
+            else:
+                client = await tdesk.ToTelethon(session="anon_session.session", flag=UseCurrentSession)
+        except Exception as e:
+            print(Fore.RED + f"Error loading tdata: {e}")
+            print(Fore.YELLOW + "Falling back to API method...")
+            session_path = os.path.join(os.path.abspath(PATH), "anon_session.session")
+            client = TelegramClient(session_path, int(API_ID), API_HASH)
+    else:
+        session_path = os.path.join(os.path.abspath(PATH), "anon_session.session")
+        client = TelegramClient(session_path, int(API_ID), API_HASH)
+
+    if client is None:
+        print(Fore.RED + "Failed to initialize Telegram client. Exiting.")
+        return
+        
     async with client:
         session = Session()
         try:
@@ -247,7 +274,5 @@ async def main():
         finally:
             session.close()
 
-
 if __name__ == "__main__":
-    with client:
-        client.loop.run_until_complete(main())
+    asyncio.run(main())

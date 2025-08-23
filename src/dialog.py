@@ -22,12 +22,25 @@ def get_user_data() -> tuple[str, str, str, str, bool]:
     Returns:
         (API_ID, API_HASH, CHANNEL_NAME, PATH, session_exists)
     """
-    API_ID = os.getenv("API_ID")
-    API_HASH = os.getenv("API_HASH")
-    if not API_ID or not API_HASH:
-        raise RuntimeError("API_ID and API_HASH must be set in your environment or .env file.")
-    PATH = os.path.expanduser(input("ENTER THE PATH TO THE FOLDER WHERE ALL THE DATA WILL BE SAVED\n-> "))
+
+    use_tdata = input("[+] USE TDATA FOLDER? [y/n]\n$ ")
+    TDATA_PATH = ""
+    API_ID = ""
+    API_HASH = ""
+
+    if use_tdata == "n":
+        API_ID = os.getenv("API_ID")
+        API_HASH = os.getenv("API_HASH")
+        if not API_ID or not API_HASH:
+            raise RuntimeError("[!] API_ID and API_HASH must be set in your environment or .env file.")
+    elif use_tdata == "y":
+        TDATA_PATH = input("[+] ENTER THE PATH TO TDATA FOLDER\n$ ")
+    else:
+        print("ERROR")
+
+    PATH = os.path.expanduser(input("[+] ENTER THE PATH TO THE FOLDER WHERE ALL THE DATA WILL BE SAVED\n$ "))
     session_path = os.path.join(PATH, "anon_session.session")
     session_exists = os.path.exists(session_path)
-    CHANNEL_NAME = input("ENTER CHANNEL NAME (without @)\n-> ")
-    return API_ID, API_HASH, CHANNEL_NAME, PATH, session_exists
+    CHANNEL_NAME = input("[+] ENTER CHANNEL NAME (without @)\n$ ")
+
+    return API_ID, API_HASH, CHANNEL_NAME, PATH, TDATA_PATH, session_exists
