@@ -1,3 +1,4 @@
 tgd/
 .env
 src/__pycache__/
+src/anon_session.session

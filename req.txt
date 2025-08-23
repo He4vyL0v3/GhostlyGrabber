@@ -8,3 +8,4 @@ SQLAlchemy==2.0.41
 Telethon==1.40.0
 tqdm==4.67.1
 typing_extensions==4.14.0
+opentele
