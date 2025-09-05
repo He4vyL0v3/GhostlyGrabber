@@ -3,18 +3,12 @@ import os
 from typing import Optional, Tuple
 
 from colorama import Fore, init
-from telethon import TelegramClient
-from telethon.tl.types import (
-    Message,
-    MessageMediaDocument,
-    MessageMediaPhoto,
-    User,
-)
-from tqdm import tqdm
-
+from opentele.api import UseCurrentSession
 from opentele.td import TDesktop
 from opentele.tl import TelegramClient
-from opentele.api import UseCurrentSession
+from telethon import TelegramClient
+from telethon.tl.types import Message, MessageMediaDocument, MessageMediaPhoto, User
+from tqdm import tqdm
 
 from db import (
     add_discussion,
@@ -26,6 +20,8 @@ from db import (
 )
 from dialog import get_user_data, logo
 
+
+session_name = "anon_session.session"
 
 def get_media_info(message: Message) -> Tuple[Optional[str], Optional[str]]:
     """
@@ -125,12 +121,7 @@ async def download_discussion(
 
 
 async def process_discussion_replies(
-    client, 
-    session, 
-    message, 
-    channel_media_dir, 
-    semaphore,
-    entity
+    client, session, message, channel_media_dir, semaphore, entity
 ):
     if not (message.replies and message.replies.replies > 0):
         return
@@ -149,13 +140,17 @@ async def process_discussion_replies(
                 try:
                     reply_sender = await client.get_entity(reply.sender_id)
                     if isinstance(reply_sender, User):
-                        reply_username = await save_user(session, TelegramUser, reply_sender)
+                        reply_username = await save_user(
+                            session, telegram_user, reply_sender
+                        )
                 except (ValueError, TypeError) as e:
-                    print(Fore.YELLOW + f"Error getting sender for reply {reply.id}: {e}")
+                    print(
+                        Fore.YELLOW + f"Error getting sender for reply {reply.id}: {e}"
+                    )
 
             add_discussion(
                 session,
-                Discussion,
+                discussion_model,
                 message_id=reply.id,
                 post_id=message.id,
                 text=reply.text,
@@ -166,7 +161,10 @@ async def process_discussion_replies(
     except Exception as e:
         print(Fore.RED + f"Error processing replies for message {message.id}: {e}")
 
-async def process_message(client, session, message, channel_media_dir, semaphore, entity):
+
+async def process_message(
+    client, session, message, channel_media_dir, semaphore, entity
+):
     media_path = await download_media_with_semaphore(
         message, client, channel_media_dir, semaphore
     )
@@ -175,15 +173,15 @@ async def process_message(client, session, message, channel_media_dir, semaphore
     if message.sender_id:
         sender = await client.get_entity(message.sender_id)
         if isinstance(sender, User):
-            username = await save_user(session, TelegramUser, sender)
+            username = await save_user(session, telegram_user, sender)
 
-    existing_post = get_existing_post(session, PostModel, message.id)
+    existing_post = get_existing_post(session, post_model, message.id)
     if existing_post:
         return
 
     add_post(
         session,
-        PostModel,
+        post_model,
         post_id=message.id,
         text=message.text,
         media_path=media_path,
@@ -200,7 +198,7 @@ async def process_message(client, session, message, channel_media_dir, semaphore
 
 async def main():
     logo()
-    API_ID, API_HASH, CHANNEL_NAME, PATH, TDATA_PATH, session_exists = get_user_data()
+    API_ID, API_HASH, CHANNEL_NAME, PATH, TDATA_PATH, _ = get_user_data()
 
     MEDIA_DIR = os.path.join(os.path.abspath(PATH), "GhostlyGrabber_media")
     MAX_CONCURRENT_DOWNLOADS = 10000
@@ -208,38 +206,45 @@ async def main():
     channel_media_dir = os.path.join(MEDIA_DIR, CHANNEL_NAME)
     os.makedirs(channel_media_dir, exist_ok=True)
 
-    engine, Session, TelegramUser, PostModel, Discussion = init_db(PATH, CHANNEL_NAME)
+    _, session_local, _, post_model, _ = init_db(PATH, CHANNEL_NAME)
     init(autoreset=True)
 
     # Initialize client variable
     client = None
-    
+
     if TDATA_PATH != "":
         try:
             tdesk = TDesktop(TDATA_PATH)
             if not tdesk.isLoaded():
-                print(Fore.RED + "Failed to load tdata. Please check the path and try again.")
+                print(
+                    Fore.RED
+                    + "Failed to load tdata. Please check the path and try again."
+                )
                 print(Fore.YELLOW + "Falling back to API method...")
                 # Fall back to API method
-                session_path = os.path.join(os.path.abspath(PATH), "anon_session.session")
+                session_path = os.path.join(
+                    os.path.abspath(PATH), session_name
+                )
                 client = TelegramClient(session_path, int(API_ID), API_HASH)
             else:
-                client = await tdesk.ToTelethon(session="anon_session.session", flag=UseCurrentSession)
+                client = await tdesk.ToTelethon(
+                    session=session_name, flag=UseCurrentSession
+                )
         except Exception as e:
             print(Fore.RED + f"Error loading tdata: {e}")
             print(Fore.YELLOW + "Falling back to API method...")
-            session_path = os.path.join(os.path.abspath(PATH), "anon_session.session")
+            session_path = os.path.join(os.path.abspath(PATH), session_name)
             client = TelegramClient(session_path, int(API_ID), API_HASH)
     else:
-        session_path = os.path.join(os.path.abspath(PATH), "anon_session.session")
+        session_path = os.path.join(os.path.abspath(PATH), session_name)
         client = TelegramClient(session_path, int(API_ID), API_HASH)
 
     if client is None:
         print(Fore.RED + "Failed to initialize Telegram client. Exiting.")
         return
-        
+
     async with client:
-        session = Session()
+        session = session_local()
         try:
             channel = await client.get_entity(CHANNEL_NAME)
             total_messages = (await client.get_messages(channel, limit=0)).total
@@ -248,18 +253,13 @@ async def main():
                 total=total_messages, desc="Downloading data", unit="msgs", ncols=100
             )
 
-            last_post_id = get_last_post_id(session, PostModel)
+            last_post_id = get_last_post_id(session, post_model)
             semaphore = asyncio.Semaphore(MAX_CONCURRENT_DOWNLOADS)
 
             async for message in client.iter_messages(channel, min_id=last_post_id):
                 try:
                     await process_message(
-                        client, 
-                        session, 
-                        message, 
-                        channel_media_dir, 
-                        semaphore,
-                        channel
+                        client, session, message, channel_media_dir, semaphore, channel
                     )
                 except Exception as e:
                     print(Fore.RED + f"Error {message.id}: {e}")
@@ -273,6 +273,7 @@ async def main():
             print(Fore.RED + f"Error: {e}")
         finally:
             session.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
